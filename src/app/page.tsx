@@ -52,7 +52,7 @@ export default function Home() {
               </div>
               <h1 className="text-4xl font-extrabold tracking-tight lg:text-6xl mb-6 max-w-4xl">
                 Geleceğini Şansa Bırakma, <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Verilerle Karar Ver.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Verilerle Karar Ver!</span>
               </h1>
               <p className="text-xl text-gray-500 mb-10 max-w-2xl leading-relaxed">
                 Yapay zeka destekli analiz motorumuzla sana en uygun kariyer yolunu çiz veya hedefini kendin belirleyip yol haritanı oluştur.
