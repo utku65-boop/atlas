@@ -37,8 +37,9 @@ function TargetSelectionContent() { // Inner Component
 
     // Filter State
     const [selectedCity, setSelectedCity] = useState<string | string[]>("all");
-    const [selectedType, setSelectedType] = useState<string[]>(["Devlet", "Vakıf"]);
-    const [selectedScholarship, setSelectedScholarship] = useState<string[]>(["Ücretli", "Burslu", "%50 İndirimli"]);
+    const [selectedType, setSelectedType] = useState<string[]>(['Devlet', 'Vakıf']);
+    const [selectedScholarship, setSelectedScholarship] = useState<string[]>(['Burslu', '%50 İndirimli', 'Ücretli']);
+    const [searchQuery, setSearchQuery] = useState("");
     const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]); // New Department Filter
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isDeptFilterOpen, setIsDeptFilterOpen] = useState(false);
@@ -106,10 +107,15 @@ function TargetSelectionContent() { // Inner Component
 
     useEffect(() => {
         // Load user
-        const userStr = localStorage.getItem("user");
-        if (userStr) {
-            try { setUserName(JSON.parse(userStr).name); } catch (e) { }
-        }
+        const fetchUser = async () => {
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    setUserName(session.user.user_metadata?.name || "Öğrenci");
+                }
+            }
+        };
+        fetchUser();
 
         // Load nets
         const netsStr = localStorage.getItem("currentNets");
@@ -158,28 +164,13 @@ function TargetSelectionContent() { // Inner Component
 
     // Helper: Filter Universities per Department
     const getFilteredUniversities = (dept: Department) => {
-        // 0. Department Filter (Top level)
-        if (!selectedDepartments.includes(dept.id)) return [];
-
         if (!dept.universityTargets) return [];
         return dept.universityTargets.filter(uni => {
-            // 1. City Filter
-            if (selectedCity !== "all") {
-                const cityList = Array.isArray(selectedCity) ? selectedCity : [selectedCity];
-                if (cityList.length > 0 && !cityList.includes(uni.city || "")) return false;
-            }
-
-            // 2. Type Filter
-            const type = uni.type || "Devlet";
-            if (!selectedType.includes(type)) return false;
-
-            // 3. Scholarship Filter
-            if (type === 'Vakıf') {
-                const sch = uni.scholarship || "Ücretli";
-                if (!selectedScholarship.includes(sch)) return false;
-            }
-
-            return true;
+            const matchCity = selectedCity === 'all' || (Array.isArray(selectedCity) ? selectedCity.length === 0 || (uni.city && selectedCity.includes(uni.city)) : selectedCity === uni.city);
+            const matchType = uni.type ? selectedType.includes(uni.type) : false;
+            const matchScholarship = uni.type === 'Devlet' || selectedScholarship.includes(uni.scholarship || '');
+            const matchSearch = (uni.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+            return matchCity && matchType && matchScholarship && matchSearch;
         });
     };
 
@@ -188,7 +179,9 @@ function TargetSelectionContent() { // Inner Component
     };
 
     const toggleScholarship = (sch: string) => {
-        setSelectedScholarship(prev => prev.includes(sch) ? prev.filter(s => s !== sch) : [...prev, sch]);
+        setSelectedScholarship(prev =>
+            prev.includes(sch) ? prev.filter(item => item !== sch) : [...prev, sch]
+        );
     };
 
 
@@ -209,7 +202,7 @@ function TargetSelectionContent() { // Inner Component
         setTimeout(() => setShowSimulator(true), 300); // Small delay for UX transition
     };
 
-    const handleSimulatorSave = (finalTargetNets: NetCounts, finalScore: number) => {
+    const handleSimulatorSave = async (finalTargetNets: NetCounts, finalScore: number) => {
         console.log("handleSimulatorSave triggered", { finalTargetNets, finalScore });
         if (targetDeptData) {
             // Determine selected University object
@@ -238,7 +231,17 @@ function TargetSelectionContent() { // Inner Component
                 localStorage.setItem("minScore", targetDeptData.minScore.toString());
                 localStorage.setItem("isOnboardingComplete", "true");
 
-                console.log("Data saved to localStorage. Redirecting to /dashboard...");
+                // Sync to Supabase Metadata
+                if (supabase) {
+                    await supabase.auth.updateUser({
+                        data: {
+                            target_department: targetDeptData.name,
+                            target_university: targetUniObj?.name || ""
+                        }
+                    });
+                }
+
+                console.log("Data saved to localStorage and synchronized. Redirecting to /dashboard...");
                 // Redirect
                 router.push("/dashboard");
             } catch (error) {
@@ -333,6 +336,20 @@ function TargetSelectionContent() { // Inner Component
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+
+                            <div className="h-px bg-gray-100 my-4"></div>
+
+                            {/* University Search Filter */}
+                            <div>
+                                <Label className="font-bold text-gray-900 mb-3 block">Üniversite Ara</Label>
+                                <Input
+                                    type="text"
+                                    placeholder="Üniversite Adı..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="bg-gray-50 border-gray-200 text-sm focus-visible:ring-indigo-500 rounded-xl"
+                                />
                             </div>
 
                             <div className="h-px bg-gray-100 my-4"></div>

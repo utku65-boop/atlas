@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Rocket, Chrome } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent | string) => {
+    const handleLogin = async (e: React.FormEvent | string) => {
         if (typeof e !== 'string') e.preventDefault();
 
         const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
@@ -26,19 +27,26 @@ export default function LoginPage() {
 
         setIsLoading(true);
 
-        const username = emailInput.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
-        const displayName = username.charAt(0).toUpperCase() + username.slice(1);
+        try {
+            if (!supabase) throw new Error("Supabase bağlantısı kurulamadı.");
 
-        setTimeout(() => {
-            setIsLoading(false);
-            localStorage.setItem("user", JSON.stringify({
-                name: displayName,
-                username: username,
-                email: emailInput
-            }));
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: emailInput,
+                password: passwordInput,
+            });
+
+            if (error) {
+                alert("Giriş başarısız: " + error.message);
+                setIsLoading(false);
+                return;
+            }
 
             router.push("/dashboard");
-        }, 1500);
+        } catch (error: any) {
+            alert("Bir hata oluştu: " + error.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

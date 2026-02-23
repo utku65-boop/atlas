@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { questions as riasecQuestions } from "@/lib/data/questions";
 import { calculateRiasecScore } from "@/lib/algorithm";
 import { ArrowRight, Check, ChevronLeft, User, GraduationCap, MapPin, Target } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 // Types
 type TestStage = 'PROFILE' | 'TEST' | 'ACADEMIC' | 'GATE';
@@ -130,34 +131,63 @@ export default function CareerTestPage() {
         }
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+    const [password, setPassword] = useState("");
+
     // 4. Gate Handler
-    const handleGateSubmit = (e: React.FormEvent) => {
+    const handleGateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Mock Registration
-        const user = {
-            // name: userProfile.name, // Removed
-            // city: userProfile.city, // Removed
-            // grade: userProfile.grade, // Removed
-            email: email,
-            isPremium: false
-        };
+        if (!supabase) {
+            alert("Supabase bağlantısı kurulamadı");
+            return;
+        }
 
-        localStorage.setItem("user", JSON.stringify(user));
+        setIsLoading(true);
 
-        // Calculate scores to pass to next step
-        const scores = calculateRiasecScore(selectedQuestions, riasecQuestions);
+        try {
+            const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+            const defaultName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
 
-        // Save scores temporarily for the next page to use
-        localStorage.setItem("tempScores", JSON.stringify(scores));
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        name: defaultName,
+                        username: emailPrefix,
+                        isPremium: false
+                    }
+                }
+            });
 
-        // Clear Test Persistence
-        localStorage.removeItem("test_stage");
-        localStorage.removeItem("test_step");
-        localStorage.removeItem("test_answers");
+            if (error) {
+                alert("Kayıt sırasında hata oluştu: " + error.message);
+                setIsLoading(false);
+                return;
+            }
 
-        // Redirect to Target Selection
-        router.push("/onboarding/target");
+            // Calculate scores to pass to next step
+            const scores = calculateRiasecScore(selectedQuestions, riasecQuestions);
+
+            // Here we should ideally save scores to Supabase DB.
+            // For now, continuing the existing flow by saving to local storage.
+            // In a full implementation, we'd do an insert into the `profiles` table.
+
+            localStorage.setItem("tempScores", JSON.stringify(scores));
+
+            // Clear Test Persistence
+            localStorage.removeItem("test_stage");
+            localStorage.removeItem("test_step");
+            localStorage.removeItem("test_answers");
+
+            // Redirect to Target Selection
+            router.push("/onboarding/target");
+        } catch (err: any) {
+            alert("Beklenmeyen hata: " + err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // --- Renderers ---
@@ -330,6 +360,8 @@ export default function CareerTestPage() {
                                     placeholder="******"
                                     required
                                     minLength={6}
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
                                 />
                             </div>
                             <div className="flex items-center space-x-2">

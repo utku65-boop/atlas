@@ -42,14 +42,16 @@ export function OnboardingChecklist() {
 
         // 4. Arkadaş Ekle (Supabase check)
         let friendsDone = false;
-        const userStr = localStorage.getItem("user");
-        if (userStr && supabase) {
-            const user = JSON.parse(userStr);
-            const { data } = await supabase
-                .from('friendships')
-                .select('*')
-                .or(`user_id.eq.${user.username},friend_id.eq.${user.username}`);
-            friendsDone = !!data && data.length >= 3;
+        if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                const username = session.user.user_metadata?.username || session.user.email?.split('@')[0];
+                const { data } = await supabase
+                    .from('friendships')
+                    .select('*')
+                    .or(`user_id.eq.${username},friend_id.eq.${username}`);
+                friendsDone = !!data && data.length >= 3;
+            }
         }
 
         const checklist: ChecklistItem[] = [

@@ -9,28 +9,37 @@ import { ArrowRight, CheckCircle2, TrendingUp, UserCheck, BrainCircuit, Target }
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const [hasTarget, setHasTarget] = useState(false);
 
   useEffect(() => {
-    // Mobile-first lock: Redirect to dashboard if already logged in
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      window.location.href = "/dashboard";
-      return;
-    }
+    const checkAuth = async () => {
+      let isAuthed = false;
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) isAuthed = true;
+      }
 
-    // Only set hasTarget if the user is actually logging in or we want to persist it.
-    // However, if there's NO user, we shouldn't show "Dashboard'a Dön" anyway because they can't access dashboard.
-    // So let's ensure we only show the target prompt if we somehow want to suggest they continue, but "Dashboard'a Dön" strictly requires login.
-    // Actually, if there is no user, they should always see the fresh homepage.
-    const target = localStorage.getItem("targetDepartment");
-    if (target && savedUser) {
-      setHasTarget(true);
-    } else {
-      setHasTarget(false);
-    }
+      if (isAuthed) {
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      // Only set hasTarget if the user is actually logging in or we want to persist it.
+      // However, if there's NO user, we shouldn't show "Dashboard'a Dön" anyway because they can't access dashboard.
+      // So let's ensure we only show the target prompt if we somehow want to suggest they continue, but "Dashboard'a Dön" strictly requires login.
+      // Actually, if there is no user, they should always see the fresh homepage.
+      const target = localStorage.getItem("targetDepartment");
+      if (target && isAuthed) {
+        setHasTarget(true);
+      } else {
+        setHasTarget(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   return (
@@ -196,7 +205,7 @@ export default function Home() {
               </div>
               <div className="relative z-10 text-center">
                 <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">3</div>
-                <h3 className="font-bold text-xl mb-2">Yol Hariteni Al</h3>
+                <h3 className="font-bold text-xl mb-2">Yol Haritasını Al</h3>
                 <p className="text-gray-500">Sana özel kariyer ve çalışma planına kavuş.</p>
               </div>
 

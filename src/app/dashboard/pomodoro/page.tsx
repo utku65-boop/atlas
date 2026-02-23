@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Play, Pause, RotateCcw, Coffee, Brain, AlertOctagon, ArrowLeft, Zap, Trophy, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function DeepFocusPage() {
     const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -17,6 +18,21 @@ export default function DeepFocusPage() {
     const [isDuel, setIsDuel] = useState(false);
     const [opponentProgress, setOpponentProgress] = useState<number | null>(null);
     const [opponentName, setOpponentName] = useState("Arkadaşın");
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        const loadUser = async () => {
+            if (!supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUser({
+                    username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+                    name: session.user.user_metadata?.name || session.user.email?.split('@')[0]
+                });
+            }
+        };
+        loadUser();
+    }, []);
 
     // Marginal XP Logic
     const baseXP = 25;
@@ -53,12 +69,8 @@ export default function DeepFocusPage() {
     // Duel Sync (Polling)
     useEffect(() => {
         let syncInterval: any = null;
-        if (isActive && isDuel) {
+        if (isActive && isDuel && user) {
             syncInterval = setInterval(async () => {
-                const savedUser = localStorage.getItem("user");
-                if (!savedUser) return;
-                const user = JSON.parse(savedUser);
-
                 // Update my progress
                 fetch('/api/user/sync', {
                     method: 'POST',
@@ -91,7 +103,7 @@ export default function DeepFocusPage() {
             }, 3000);
         }
         return () => clearInterval(syncInterval);
-    }, [isActive, isDuel, timeLeft, distractions]);
+    }, [isActive, isDuel, timeLeft, distractions, user]);
 
     const handleSessionEnd = () => {
         setIsActive(false);
@@ -105,12 +117,11 @@ export default function DeepFocusPage() {
             localStorage.setItem("user_xp", newXp.toString());
 
             // Sync with backend
-            const savedUser = localStorage.getItem("user");
-            if (savedUser) {
+            if (user) {
                 fetch('/api/user/sync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...JSON.parse(savedUser), xp: newXp })
+                    body: JSON.stringify({ ...user, xp: newXp })
                 }).catch(err => console.error("Sync error:", err));
             }
 

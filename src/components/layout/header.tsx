@@ -6,6 +6,7 @@ import { Menu, X, Rocket, TrendingUp, Bell, User, ShieldCheck, LayoutDashboard, 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { supabase } from "@/lib/supabase";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,25 +19,39 @@ export function Header() {
     useEffect(() => {
         setMounted(true);
         if (typeof window !== 'undefined') {
-            const savedUser = localStorage.getItem("user");
-            if (savedUser) {
-                const parsedUser = JSON.parse(savedUser);
-                setUser(parsedUser);
+            const checkSession = async () => {
+                if (supabase) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user) {
+                        const displayName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || "Öğrenci";
+                        setUser({ name: displayName, ...session.user });
+                        return;
+                    }
+                }
+                setUser(null);
+            };
 
-                // Sync with backend for social features
-                fetch('/api/user/sync', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...parsedUser,
-                        xp: parseInt(localStorage.getItem("user_xp") || "0")
-                    })
-                }).catch(err => console.error("Sync error:", err));
+            checkSession();
+
+            if (supabase) {
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                    if (session?.user) {
+                        const displayName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || "Öğrenci";
+                        setUser({ name: displayName, ...session.user });
+                    } else {
+                        setUser(null);
+                    }
+                });
+
+                return () => subscription.unsubscribe();
             }
         }
     }, []);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
         localStorage.clear();
         window.location.href = "/";
     };
@@ -84,8 +99,8 @@ export function Header() {
                     )}
                     {!user && (
                         <>
-                            <Link href="#features" className="hover:text-indigo-600 transition-colors">Özellikler</Link>
-                            <Link href="#pricing" className="hover:text-indigo-600 transition-colors">Fiyatlandırma</Link>
+                            <Link href="/#features" className="hover:text-indigo-600 transition-colors">Özellikler</Link>
+                            <Link href="/#pricing" className="hover:text-indigo-600 transition-colors">Fiyatlandırma</Link>
                         </>
                     )}
                 </nav>

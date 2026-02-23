@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, UserPlus, Search, Trophy, Timer, Zap, MessageSquare, Handshake } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export default function SocialPage() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -18,12 +19,21 @@ export default function SocialPage() {
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
-            const parsed = JSON.parse(savedUser);
-            setUser(parsed);
-            fetchInitialData(parsed.username || parsed.name.toLowerCase().replace(/\s/g, ''));
-        }
+        const loadUser = async () => {
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    const displayName = session.user.user_metadata?.name || session.user.email?.split('@')[0];
+                    const username = session.user.user_metadata?.username || displayName.toLowerCase().replace(/\s/g, '');
+                    const currentUser = { name: displayName, username: username, email: session.user.email };
+                    setUser(currentUser);
+                    fetchInitialData(username);
+                    return;
+                }
+            }
+            window.location.href = "/login";
+        };
+        loadUser();
     }, []);
 
     const fetchInitialData = async (username: string) => {

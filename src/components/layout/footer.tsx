@@ -21,7 +21,7 @@ export function Footer() {
                         <ul className="space-y-2 text-sm text-gray-500">
                             <li><Link href="/#features" className="hover:text-indigo-600">Özellikler</Link></li>
                             <li><Link href="/test" className="hover:text-indigo-600">Kariyer Testi</Link></li>
-                            <li><Link href="/blog" className="hover:text-indigo-600">Başarı Blogu</Link></li>
+                            <li><Link href="/#blog" className="hover:text-indigo-600">Başarı Blogu</Link></li>
                         </ul>
                     </div>
 
@@ -30,15 +30,15 @@ export function Footer() {
                         <ul className="space-y-2 text-sm text-gray-500">
                             <li><Link href="/dashboard/profile" className="hover:text-indigo-600">Profil Ayarları</Link></li>
                             <li><Link href="/dashboard/net-takip" className="hover:text-indigo-600">Net Takip</Link></li>
-                            <li><Link href="/mentor-basvuru" className="hover:text-indigo-600">Mentorluk</Link></li>
+                            <li><Link href="/#mentor-cta" className="hover:text-indigo-600">Mentorluk</Link></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-semibold mb-4">Yasal</h4>
                         <ul className="space-y-2 text-sm text-gray-500">
-                            <li className="opacity-50 underline decoration-dotted cursor-help" title="Yakında eklenecek">Gizlilik Politikası</li>
-                            <li className="opacity-50 underline decoration-dotted cursor-help" title="Yakında eklenecek">Kullanım Şartları</li>
+                            <li><Link href="/gizlilik-politikasi" className="hover:text-indigo-600">Gizlilik Politikası</Link></li>
+                            <li><Link href="/kullanim-sartlari" className="hover:text-indigo-600">Kullanım Şartları</Link></li>
                         </ul>
                     </div>
                 </div>

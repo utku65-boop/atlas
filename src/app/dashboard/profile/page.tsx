@@ -9,23 +9,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Mail, GraduationCap, MapPin, Save, Shield, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfilePage() {
     const [user, setUser] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem("user");
-        const target = localStorage.getItem("targetDepartment");
-        const uni = localStorage.getItem("selectedUniversity");
+        const fetchUser = async () => {
+            let currentUser = null;
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    const displayName = session.user.user_metadata?.name || session.user.email?.split('@')[0];
+                    currentUser = {
+                        name: displayName,
+                        username: session.user.user_metadata?.username || displayName.toLowerCase().replace(/\s/g, ''),
+                        email: session.user.email
+                    };
+                }
+            }
 
-        if (savedUser) {
-            setUser({
-                ...JSON.parse(savedUser),
-                target: target ? JSON.parse(target).name : "Henüz seçilmedi",
-                university: uni || "Henüz seçilmedi"
-            });
-        }
+            const target = localStorage.getItem("targetDepartment");
+            const uni = localStorage.getItem("selectedUniversity");
+
+            if (currentUser) {
+                setUser({
+                    ...currentUser,
+                    target: target ? JSON.parse(target).name : "Henüz seçilmedi",
+                    university: uni || "Henüz seçilmedi"
+                });
+            } else {
+                window.location.href = "/login";
+            }
+        };
+        fetchUser();
     }, []);
 
     if (!user) return null;
@@ -110,7 +128,7 @@ export default function ProfilePage() {
                                                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
                                                     <Mail className="w-4 h-4 text-gray-400" />
                                                     <Input
-                                                        defaultValue="ogrenci@kariyerrehberi.ai"
+                                                        value={user.email}
                                                         disabled={true}
                                                         className="border-none bg-transparent h-6 p-0 shadow-none focus-visible:ring-0 font-bold italic opacity-50"
                                                     />
@@ -139,10 +157,16 @@ export default function ProfilePage() {
                                     {isEditing && (
                                         <div className="mt-8 flex justify-end">
                                             <Button
-                                                onClick={() => {
-                                                    localStorage.setItem("user", JSON.stringify(user));
+                                                onClick={async () => {
+                                                    if (supabase) {
+                                                        await supabase.auth.updateUser({
+                                                            data: {
+                                                                name: user.name,
+                                                                username: user.username
+                                                            }
+                                                        });
+                                                    }
                                                     setIsEditing(false);
-                                                    window.location.reload();
                                                 }}
                                                 className="bg-green-600 hover:bg-green-700 gap-2 h-12 px-8 rounded-2xl font-bold shadow-lg shadow-green-100"
                                             >

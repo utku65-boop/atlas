@@ -21,6 +21,7 @@ import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { TrendingUp, Lock, Unlock, AlertTriangle, BookOpen, ChevronRight, Check, X, ArrowUpRight, ArrowRight, User, Award, PlusCircle, CalendarClock, Target, Zap, Coffee, Lightbulb, Clock, Bell, Brain } from "lucide-react";
 import { Department } from "@/lib/data/departments";
 import { NetCounts } from "@/lib/score-calculator";
+import { supabase } from "@/lib/supabase";
 
 // Countdown Component
 function CountdownTimer() {
@@ -129,9 +130,21 @@ export default function DashboardPage() {
         const loadDashboardData = async () => {
             try {
                 // 1. Load User Info
-                const savedUser = localStorage.getItem("user");
-                if (savedUser) setUser(JSON.parse(savedUser));
-                else setUser({ name: "Öğrenci" });
+                let currentUser = null;
+                if (supabase) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user) {
+                        const displayName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || "Öğrenci";
+                        currentUser = { name: displayName, ...session.user };
+                    }
+                }
+
+                if (!currentUser) {
+                    router.push("/login");
+                    return;
+                }
+
+                setUser(currentUser);
 
                 // 2. Load Target & University
                 const savedTarget = localStorage.getItem("targetDepartment");
